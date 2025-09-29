@@ -545,9 +545,7 @@ class _CalculatorPageState extends State<CalculatorPage> with SingleTickerProvid
         final totalW = constraints.maxWidth;
         final itemH = (totalH - spacing * (rows - 1)) / rows;
         final itemW = (totalW - spacing * (cols - 1)) / cols;
-        // Make tiles a bit shorter than full-height to reduce button height
-        final shrinkFactor = totalH < 780 ? 1.12 : 1.18; // tune per device height
-        final aspect = itemW / (itemH * shrinkFactor);
+        final aspect = itemW / itemH;
 
         return GridView.builder(
           itemCount: keys.length,
@@ -760,27 +758,46 @@ class _CalculatorPageState extends State<CalculatorPage> with SingleTickerProvid
       'e': () { _insert('${math.e}'); _closeSheet(); },
     };
 
-    return GridView.count(
-      crossAxisCount: 3,
-      mainAxisSpacing: 16,
-      crossAxisSpacing: 16,
-      childAspectRatio: 1.9, // wide rounded chips, avoid overlap
-      padding: const EdgeInsets.symmetric(horizontal: 4),
-      physics: const BouncingScrollPhysics(),
-      children: labels.map((text) {
-        final onTap = handlers[text] ?? () {};
-        return GestureDetector(
-          onTap: onTap,
-          child: Container(
-            alignment: Alignment.center,
-            decoration: _neumorphDecoration(radius: 18),
-            child: Text(
-              text,
-              style: TextStyle(color: _text, fontWeight: FontWeight.w600),
-            ),
+    // 15 items, 3 columns => 5 rows. Compute aspect ratio so 5 rows fit without scroll.
+    return LayoutBuilder(
+      builder: (context, c) {
+        const rows = 5;
+        const cols = 3;
+        const spacing = 12.0;
+        final totalH = c.maxHeight;
+        final totalW = c.maxWidth - 8; // account small horizontal padding
+        final itemH = (totalH - spacing * (rows - 1)) / rows;
+        final itemW = (totalW - spacing * (cols - 1)) / cols;
+        // Slightly reduce height to avoid clipping rounded shadows
+        final aspect = itemW / (itemH * 0.96);
+
+        return GridView.builder(
+          padding: const EdgeInsets.symmetric(horizontal: 4),
+          physics: const NeverScrollableScrollPhysics(),
+          itemCount: labels.length,
+          gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
+            crossAxisCount: cols,
+            mainAxisSpacing: spacing,
+            crossAxisSpacing: spacing,
+            childAspectRatio: aspect,
           ),
+          itemBuilder: (_, i) {
+            final text = labels[i];
+            final onTap = handlers[text] ?? () {};
+            return GestureDetector(
+              onTap: onTap,
+              child: Container(
+                alignment: Alignment.center,
+                decoration: _neumorphDecoration(radius: 18),
+                child: Text(
+                  text,
+                  style: TextStyle(color: _text, fontWeight: FontWeight.w600),
+                ),
+              ),
+            );
+          },
         );
-      }).toList(),
+      },
     );
   }
 }
