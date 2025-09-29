@@ -127,6 +127,8 @@ class _CalculatorPageState extends State<CalculatorPage> with SingleTickerProvid
     return Scaffold(
       backgroundColor: _bg,
       body: SafeArea(
+        top: true,
+        bottom: false,
         child: Stack(
           children: [
             PageView(
@@ -226,8 +228,9 @@ class _CalculatorPageState extends State<CalculatorPage> with SingleTickerProvid
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
         Center(child: _modeToggle()),
-        const SizedBox(height: 8),
+        const SizedBox(height: 4),
         Expanded(
+          flex: 1,
           child: Align(
             alignment: Alignment.bottomRight,
             child: Column(
@@ -236,22 +239,22 @@ class _CalculatorPageState extends State<CalculatorPage> with SingleTickerProvid
               children: [
                 Text(
                   _expr.isEmpty ? '' : _expr,
-                  style: TextStyle(color: _text, fontSize: 24),
+                  style: TextStyle(color: _text, fontSize: 22),
                   maxLines: 2,
                   overflow: TextOverflow.ellipsis,
                   textAlign: TextAlign.right,
                 ),
-                const SizedBox(height: 6),
+                const SizedBox(height: 4),
                 Text(
                   _result,
                   style: TextStyle(
                     color: _text,
-                    fontSize: 56,
+                    fontSize: 52,
                     fontWeight: FontWeight.w700,
                   ),
                   textAlign: TextAlign.right,
                 ),
-                const SizedBox(height: 8),
+                const SizedBox(height: 4),
                 Align(
                   alignment: Alignment.centerRight,
                   child: Text(
@@ -263,11 +266,14 @@ class _CalculatorPageState extends State<CalculatorPage> with SingleTickerProvid
             ),
           ),
         ),
-        const SizedBox(height: 8),
+        const SizedBox(height: 6),
         _middleNavRow(),
-        const SizedBox(height: 8),
-        _grid(),
-        const SizedBox(height: 10),
+        const SizedBox(height: 6),
+        Expanded(
+          flex: 4,
+          child: _grid(),
+        ),
+        const SizedBox(height: 6),
       ],
     );
   }
@@ -431,11 +437,6 @@ class _CalculatorPageState extends State<CalculatorPage> with SingleTickerProvid
     });
   }
 
-  bool _hasValueAtEnd() {
-    final t = _expr.trimRight();
-    return RegExp(r'(\d|\))$').hasMatch(t);
-  }
-
   void _applyPower(int p) {
     setState(() {
       final t = _expr;
@@ -535,53 +536,65 @@ class _CalculatorPageState extends State<CalculatorPage> with SingleTickerProvid
       '0', '.', '⌫', '=',
     ];
 
-    return Expanded(
-      child: GridView.builder(
-        shrinkWrap: true,
-        itemCount: keys.length,
-        physics: const NeverScrollableScrollPhysics(),
-        gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
-          crossAxisCount: 4,
-          mainAxisSpacing: 12,
-          crossAxisSpacing: 12,
-          childAspectRatio: 1,
-        ),
-        itemBuilder: (context, i) {
-          final k = keys[i];
-          final isOp = ['÷', '×', '–', '+', '=', '%'].contains(k) || k == 'C' || k == '⌫';
-          // background/text overrides for special keys
-          Color? bg;
-          Color? txt;
-          if (k == 'C') {
-            bg = const Color(0xFFE53935); // red
-          } else if (k == '=') {
-            bg = const Color(0xFF22C55E); // green
-            txt = Colors.white; // white text for '='
-          }
+    return LayoutBuilder(
+      builder: (context, constraints) {
+        const rows = 5; // our keypad rows
+        const cols = 4;
+        const spacing = 10.0;
+        final totalH = constraints.maxHeight;
+        final totalW = constraints.maxWidth;
+        final itemH = (totalH - spacing * (rows - 1)) / rows;
+        final itemW = (totalW - spacing * (cols - 1)) / cols;
+        // Make tiles a bit shorter than full-height to reduce button height
+        final shrinkFactor = totalH < 780 ? 1.12 : 1.18; // tune per device height
+        final aspect = itemW / (itemH * shrinkFactor);
 
-          return _calcButton(
-            label: k,
-            color: _button,
-            isAccent: ['÷', '×', '–', '+', '='].contains(k),
-            onTap: () {
-              if (k == '%') {
-                _onTap('/100'); // interpret percent
-              } else if (k == '=') {
-                _onTap(k);
-              } else if (k == 'C' || k == '⌫') {
-                _onTap(k);
-              } else if (k == '÷' || k == '×' || k == '–' || k == '+') {
-                _onTap(' $k ');
-              } else {
-                _onTap(k);
-              }
-            },
-            isOperator: isOp,
-            backgroundOverride: bg,
-            textColorOverride: txt,
-          );
-        },
-      ),
+        return GridView.builder(
+          itemCount: keys.length,
+          physics: const NeverScrollableScrollPhysics(),
+          gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
+            crossAxisCount: cols,
+            mainAxisSpacing: spacing,
+            crossAxisSpacing: spacing,
+            childAspectRatio: aspect,
+          ),
+          itemBuilder: (context, i) {
+            final k = keys[i];
+            final isOp = ['÷', '×', '–', '+', '=', '%'].contains(k) || k == 'C' || k == '⌫';
+            // background/text overrides for special keys
+            Color? bg;
+            Color? txt;
+            if (k == 'C') {
+              bg = const Color(0xFFE53935); // red
+            } else if (k == '=') {
+              bg = const Color(0xFF22C55E); // green
+              txt = Colors.white; // white text for '='
+            }
+
+            return _calcButton(
+              label: k,
+              color: _button,
+              isAccent: ['÷', '×', '–', '+', '='].contains(k),
+              onTap: () {
+                if (k == '%') {
+                  _onTap('/100'); // interpret percent
+                } else if (k == '=') {
+                  _onTap(k);
+                } else if (k == 'C' || k == '⌫') {
+                  _onTap(k);
+                } else if (k == '÷' || k == '×' || k == '–' || k == '+') {
+                  _onTap(' $k ');
+                } else {
+                  _onTap(k);
+                }
+              },
+              isOperator: isOp,
+              backgroundOverride: bg,
+              textColorOverride: txt,
+            );
+          },
+        );
+      },
     );
   }
 
