@@ -84,13 +84,6 @@ class _CalculatorPageState extends State<CalculatorPage> with TickerProviderStat
 
     // Initialize unit result
     _recomputeUnit();
-    // Autofocus unit From input when opening initially (non-BMI)
-    WidgetsBinding.instance.addPostFrameCallback((_) {
-      if (mounted && _unitCategory != 'BMI') {
-        _unitFromFocus.requestFocus();
-        _unitInputCtrl.selection = TextSelection.collapsed(offset: _unitInputCtrl.text.length);
-      }
-    });
   }
 
   
@@ -672,13 +665,6 @@ class _CalculatorPageState extends State<CalculatorPage> with TickerProviderStat
             duration: const Duration(milliseconds: 300),
             curve: Curves.easeInOut,
           );
-          // Focus From input after page settles
-          WidgetsBinding.instance.addPostFrameCallback((_) {
-            if (mounted) {
-              _unitFromFocus.requestFocus();
-              _unitInputCtrl.selection = TextSelection.collapsed(offset: _unitInputCtrl.text.length);
-            }
-          });
         } else {
           setState(() => _activeTab = 0);
           _pc.animateToPage(
@@ -735,13 +721,6 @@ class _CalculatorPageState extends State<CalculatorPage> with TickerProviderStat
                     _resetUnitsForCategory();
                     _recomputeUnit();
                     _savePrefs();
-                  });
-                  // Focus From input for all non-BMI categories after rebuild
-                  WidgetsBinding.instance.addPostFrameCallback((_) {
-                    if (_unitCategory != 'BMI' && mounted) {
-                      _unitFromFocus.requestFocus();
-                      _unitInputCtrl.selection = TextSelection.collapsed(offset: _unitInputCtrl.text.length);
-                    }
                   });
                 },
                 child: Container(
@@ -886,10 +865,17 @@ class _CalculatorPageState extends State<CalculatorPage> with TickerProviderStat
   Widget _boxedField(TextEditingController ctrl, FocusNode focus, String name){
     final active = _bmiActive == name;
     return GestureDetector(
+      behavior: HitTestBehavior.opaque,
       onTap: () {
         setState(() => _bmiActive = name);
         focus.requestFocus();
         // move caret to end
+        ctrl.selection = TextSelection.collapsed(offset: ctrl.text.length);
+      },
+      onTapDown: (_) {
+        // ensure focus and visual state update immediately on first tap
+        setState(() => _bmiActive = name);
+        focus.requestFocus();
         ctrl.selection = TextSelection.collapsed(offset: ctrl.text.length);
       },
       child: Container(
